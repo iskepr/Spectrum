@@ -9,6 +9,7 @@
 #include <QScreen>
 #include <QCoreApplication>
 #include <QTextStream>
+#include <QSettings>
 
 
 Spectrum::Spectrum(const QString& filePath, QWidget *parent)
@@ -50,6 +51,13 @@ Spectrum::Spectrum(const QString& filePath, QWidget *parent)
     // لتشغيل ملف ألف بإستخدام محرر طيف عند إختيار المحرر ك برنامج للتشغيل
     if (!filePath.isEmpty()) {
         this->openFile(filePath);
+    } else {
+        QSettings settings;
+        QString lastFilePath = settings.value("lastOpenedFile", "").toString();
+
+        if (!lastFilePath.isEmpty()) {
+            openFile(lastFilePath);
+        }
     }
 
     // Create a shortcut for Ctrl+S
@@ -71,6 +79,9 @@ Spectrum::Spectrum(const QString& filePath, QWidget *parent)
 }
 
 Spectrum::~Spectrum() {
+    QSettings settings;
+    settings.setValue("lastOpenedFile", currentFilePath);
+
     delete editor;
     delete menuBar;
 }

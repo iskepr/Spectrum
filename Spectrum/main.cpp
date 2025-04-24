@@ -3,11 +3,17 @@
 #include <QApplication>
 #include <QMessageBox>
 #include <QDebug>
+#include <QShortcut>
+#include <QSettings>
+#include <QFontDatabase>
+#include <QMainWindow>
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     app.setLayoutDirection(Qt::RightToLeft);
+
+    QSettings settings("YourOrganization", "YourApplication");
 
     int fontId1 = QFontDatabase::addApplicationFont(":/fonts/Resources/fonts/Tajawal/Tajawal-Regular.ttf");
     int fontId2 = QFontDatabase::addApplicationFont(":/fonts/Resources/fonts/KawkabMono-Regular.ttf");
@@ -19,8 +25,12 @@ int main(int argc, char *argv[])
         QFont font{};
         QStringList fontFamilies{};
         fontFamilies << tajawal << kawkabMono;
-        font.setFamilies(fontFamilies);
-        font.setPixelSize(18);
+
+        int defaultFontSize = 18;
+        if (fontFamilies.size() >= 2) {
+            font.setFamilies(fontFamilies);
+        }
+        font.setPixelSize(settings.value("fontSize", defaultFontSize).toInt());
         font.setWeight(QFont::Weight::Thin);
         app.setFont(font);
     }
@@ -86,8 +96,8 @@ int main(int argc, char *argv[])
     QString filePath{};
     if (app.arguments().count() > 2) {
         int ret = QMessageBox::warning(nullptr, "ألف",
-                                       "لا يمكن تمرير أكثر من معامل واحد",
-                                       QMessageBox::Close);
+                                    "لا يمكن تمرير أكثر من معامل واحد",
+                                    QMessageBox::Close);
         return ret;
     }
     if (app.arguments().count() == 2) {
@@ -96,5 +106,29 @@ int main(int argc, char *argv[])
 
     Spectrum w(filePath);
     w.showMaximized();
+
+    QShortcut *increaseFont = new QShortcut(QKeySequence("Ctrl+="), &w);
+    QObject::connect(increaseFont, &QShortcut::activated, [&app, &settings]() {
+        QFont currentFont = app.font();
+        int newSize = currentFont.pixelSize() + 1;
+        if (newSize <= 40) {
+            currentFont.setPixelSize(newSize);
+            app.setFont(currentFont);
+            settings.setValue("fontSize", newSize);
+            app.setStyleSheet(app.styleSheet());
+        }
+    });
+    
+    QShortcut *decreaseFont = new QShortcut(QKeySequence("Ctrl+-"), &w);
+    QObject::connect(decreaseFont, &QShortcut::activated, [&app, &settings]() {
+        QFont currentFont = app.font();
+        int newSize = currentFont.pixelSize() - 1;
+        if (newSize >= 12) {
+            currentFont.setPixelSize(newSize);
+            app.setFont(currentFont);
+            settings.setValue("fontSize", newSize);
+            app.setStyleSheet(app.styleSheet());
+        }
+    });    
     return app.exec();
 }

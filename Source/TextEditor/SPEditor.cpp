@@ -4,6 +4,8 @@
 #include <QTextBlock>
 #include <QScrollBar>
 #include <QMimeData>
+#include <QClipboard>
+#include <QGuiApplication>
 
 SPEditor::SPEditor(QWidget* parent) {
     setAcceptDrops(true);
@@ -143,8 +145,80 @@ void SPEditor::highlightCurrentLine() {
         extraSelections.append(selection);
     }
 
+    highlightIndentationSpaces(extraSelections);
     setExtraSelections(extraSelections);
 }
+
+/* ----------------------------------  Keyboard Shortcuts ---------------------------------- */
+void SPEditor::keyPressEvent(QKeyEvent* event) {
+    QTextCursor cursor = textCursor();
+    QString currentLine = cursor.block().text();
+
+    if ((event->key() == Qt::Key_Slash) && (event->modifiers() & Qt::ControlModifier)) { // اضفة وازالة التعليق باستخدام ctrl + /
+        cursor.beginEditBlock();
+        if (currentLine.startsWith("#")) {
+            cursor.movePosition(QTextCursor::StartOfBlock);
+            cursor.deleteChar();
+        } else {
+            cursor.movePosition(QTextCursor::StartOfBlock);
+            cursor.insertText("#");
+        }
+        cursor.endEditBlock();
+        setTextCursor(cursor);
+    } else if ((event->key() == Qt::Key_C) && (event->modifiers() & Qt::ControlModifier)) { // نسخ السطر الذي فيه المؤشر
+        QClipboard* clipboard = QGuiApplication::clipboard();
+        clipboard->setText("\n" + currentLine);
+    } else if ((event->key() == Qt::Key_X) && (event->modifiers() & Qt::ControlModifier)) { // قص السطر الذي فيه المؤشر
+        QClipboard* clipboard = QGuiApplication::clipboard();
+        clipboard->setText(currentLine);
+        cursor.select(QTextCursor::BlockUnderCursor);
+        cursor.removeSelectedText();
+    } else {
+        QPlainTextEdit::keyPressEvent(event);
+    }
+}
+
+// تلوين المسافات البادئة
+void SPEditor::highlightIndentationSpaces(QList<QTextEdit::ExtraSelection>& selections) {
+    auto block = firstVisibleBlock();
+    while (block.isValid()) {
+        QString text = block.text();
+        int spaceCount = 0, indentLevel = 0;
+
+        for (int i = 0; i < text.length(); ++i) {
+            QChar ch = text[i];
+            bool isIndent = false;
+            int start = i;
+
+            if (ch == '\t') {
+                isIndent = true;
+            } else if (ch == ' ') {
+                spaceCount++;
+                if (spaceCount == 4) {
+                    isIndent = true;
+                    start = i - 3;
+                    spaceCount = 0;
+                }
+            } else break;
+
+            if (isIndent) {
+                QTextEdit::ExtraSelection sel;
+                QTextCharFormat fmt;
+                fmt.setBackground(QColor(QStringList{"#20221e", "#182221", "#1f1a27", "#162126"}[indentLevel % 4]));
+                QTextCursor cursor(block);
+                cursor.setPosition(block.position() + start);
+                cursor.setPosition(block.position() + i + 1, QTextCursor::KeepAnchor);
+                sel.cursor = cursor;
+                sel.format = fmt;
+                selections.append(sel);
+                indentLevel++;
+            }
+        }
+        block = block.next();
+    }
+}
+
+
 
 
 /* ---------------------------------- Drag and Drop ---------------------------------- */

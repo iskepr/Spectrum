@@ -21,6 +21,7 @@ public:
 protected:
     void resizeEvent(QResizeEvent* event) override;
     bool eventFilter(QObject* obj, QEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
 
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dropEvent(QDropEvent* event) override;
@@ -31,6 +32,7 @@ private:
     SyntaxHighlighter* highlighter{};
     AutoComplete* autoComplete{};
     LineNumberArea* lineNumberArea{};
+    void highlightIndentationSpaces(QList<QTextEdit::ExtraSelection>& selections);
 
 private slots:
     void updateLineNumberAreaWidth();
